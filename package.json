@@ -1,6 +1,6 @@
 {
   "name": "dsh-skills-market",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DSH skills manager + SkillHub marketplace: manage user-level/per-workspace skills and search/install skills from SkillHub in a Web UI panel",
   "keywords": [
     "dsh-plugin",
@@ -43,6 +43,14 @@
     "test": "node --test tests/local.spec.ts tests/skillhub.spec.ts"
   },
   "license": "MIT",
+  "peerDependencies": {
+    "dsh-better-sidebar": "*"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "~18.3.1",

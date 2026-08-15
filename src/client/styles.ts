@@ -180,6 +180,12 @@ div:has(> [data-slot="sidebar.footer.action"]) {
   cursor: pointer;
 }
 
+.dshs-fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .dshs-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
 .dshs-state {
   display: flex;

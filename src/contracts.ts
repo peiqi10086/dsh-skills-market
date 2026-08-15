@@ -136,6 +136,34 @@ export interface LocaleRuntimeLike {
   register(ns: string, dicts: Record<string, Record<string, string>>): () => void
 }
 
+/* ------------------------------------------------------------------ */
+/* dsh-better-sidebar 服务（可选适配；ambient，对照其 service.d.ts）      */
+/* ------------------------------------------------------------------ */
+
+/** 侧边栏 tab 描述符（TabDescriptor 的最小使用面）。 */
+export interface BetterSidebarTabDescriptor {
+  /** 唯一 id（建议带包前缀），也是 openTab seed 的 type 值。 */
+  readonly id: string
+  /** 标题（i18n 友好：字符串或返回字符串的函数）。 */
+  readonly title: string | (() => string)
+  /** 图标：ReactNode 或 (size: number) => ReactNode。 */
+  readonly icon?: unknown
+  /** + 菜单排序（升序，默认 100；内置 explorer=10 git=20 subagent=30 terminal=40）。 */
+  readonly order?: number
+  /** 单实例：打开时聚焦既有同类型 tab 而非新开。 */
+  readonly single?: boolean
+  /** 渲染函数。 */
+  component(props: unknown): unknown
+}
+
+/** ctx.betterSidebar 服务（仅 client half 存在；可选读取，未安装为 undefined）。 */
+export interface BetterSidebarLike {
+  readonly version?: string
+  registerTab(descriptor: BetterSidebarTabDescriptor): () => void
+  /** 定向打开一个已注册的 tab（seed.type = 注册的 id）。 */
+  openTab?(seed: { readonly type: string; readonly title?: string }, scope?: unknown): void
+}
+
 /** Client 插件 apply 收到的上下文（最小面）。 */
 export interface ClientContextLike {
   readonly slots: SlotsRegistryLike

@@ -31,6 +31,8 @@ export interface SkillsInjectedProps {
 /** 入口按钮 props（sidebar.footer.action 拥有方只传 wide）。 */
 export interface SkillsEntryProps extends SkillsInjectedProps {
   readonly wide: boolean
+  /** 覆盖默认打开行为（装了 better-sidebar 时改为打开其侧边栏 tab）。 */
+  readonly onOpen?: () => void
 }
 
 /**
@@ -38,13 +40,13 @@ export interface SkillsEntryProps extends SkillsInjectedProps {
  * 行高/字号/hover 与 Cordis Plugin、插件市场、设置入口完全一致）；
  * 窄栏为 36px 圆形纯图标 + 悬停提示。图标用 IconSparkle16，与两个既有入口均不撞脸。
  */
-export function SkillsEntry({ wide, store, t }: SkillsEntryProps) {
+export function SkillsEntry({ wide, store, t, onOpen }: SkillsEntryProps) {
   const button = (
     <button
       type="button"
       className={wide ? 'dshs-entry' : 'dshs-entry-icon'}
       aria-label={t('entry.aria')}
-      onClick={() => { store.openPanel() }}
+      onClick={() => { (onOpen ?? (() => { store.openPanel() }))() }}
     >
       <IconSparkle16 size={wide ? 16 : 18} />
       {wide ? <span>{t('entry.label')}</span> : null}
@@ -518,6 +520,36 @@ function MarketView({ store, t }: SkillsInjectedProps) {
   )
 }
 
+/**
+ * 面板主体（已安装/商城两页签 + 内容，不含任何外框）。
+ * 同时被 SkillsOverlay（默认浮窗）与 better-sidebar 的 tab 组件复用。
+ */
+export function PanelBody(props: SkillsInjectedProps) {
+  const { store, t } = props
+  const mainTab = useSkillsSelector(store, s => s.mainTab)
+  return (
+    <div className="dshs-fill">
+      <div className="dshs-maintabs">
+        <button
+          type="button"
+          className={`dshs-tab${mainTab === 'installed' ? ' active' : ''}`}
+          onClick={() => { store.setMainTab('installed') }}
+        >
+          {t('tab.installed')}
+        </button>
+        <button
+          type="button"
+          className={`dshs-tab${mainTab === 'market' ? ' active' : ''}`}
+          onClick={() => { store.setMainTab('market') }}
+        >
+          {t('tab.market')}
+        </button>
+      </div>
+      {mainTab === 'installed' ? <InstalledView {...props} /> : <MarketView {...props} />}
+    </div>
+  )
+}
+
 /** shell.overlay 条目：浮动面板（Esc + 透明背板点击关闭）。 */
 export function SkillsOverlay(props: SkillsInjectedProps) {
   const { store, t } = props
@@ -564,23 +596,7 @@ export function SkillsOverlay(props: SkillsInjectedProps) {
             <IconCloseOutline16 size={14} />
           </button>
         </div>
-        <div className="dshs-maintabs">
-          <button
-            type="button"
-            className={`dshs-tab${mainTab === 'installed' ? ' active' : ''}`}
-            onClick={() => { store.setMainTab('installed') }}
-          >
-            {t('tab.installed')}
-          </button>
-          <button
-            type="button"
-            className={`dshs-tab${mainTab === 'market' ? ' active' : ''}`}
-            onClick={() => { store.setMainTab('market') }}
-          >
-            {t('tab.market')}
-          </button>
-        </div>
-        {mainTab === 'installed' ? <InstalledView {...props} /> : <MarketView {...props} />}
+        <PanelBody {...props} />
       </div>
     </>
   )
