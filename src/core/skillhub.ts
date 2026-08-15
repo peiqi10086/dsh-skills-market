@@ -68,9 +68,11 @@ const MARKET_DEFAULT_PAGE_SIZE = 30
 
 /** HTTP 层错误（状态码非 2xx）。 */
 export class SkillHubHttpError extends Error {
-  constructor(readonly status: number, message: string) {
+  readonly status: number
+  constructor(status: number, message: string) {
     super(message)
     this.name = 'SkillHubHttpError'
+    this.status = status
   }
 }
 

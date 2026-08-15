@@ -1,5 +1,6 @@
-/** core/skillhub 纯函数测试：URL 组装、响应映射、错误分类。 */
-import { describe, expect, it } from 'vitest'
+/** core/skillhub 纯函数测试：URL 组装、响应映射、错误分类（node:test + node:assert，零测试依赖）。 */
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 import {
   SkillHubHttpError,
   mapSkillHubItem,
@@ -40,7 +41,7 @@ const sample = {
 describe('mapSkillHubItem', () => {
   it('提取叶字段并兜底缺失值', () => {
     const item = mapSkillHubItem(sample.data.skills[0])
-    expect(item).toEqual({
+    assert.deepStrictEqual(item, {
       name: 'PDF和图片文字提取',
       slug: 'pdf-image-text-extractor',
       namespace: 'user_5f9c21aa',
@@ -55,8 +56,8 @@ describe('mapSkillHubItem', () => {
 
   it('畸形输入不抛错', () => {
     const item = mapSkillHubItem(null)
-    expect(item.slug).toBe('')
-    expect(item.downloads).toBe(0)
+    assert.strictEqual(item.slug, '')
+    assert.strictEqual(item.downloads, 0)
   })
 })
 
@@ -68,18 +69,18 @@ describe('searchSkills', () => {
       return Promise.resolve(fakeResponse(sample))
     }
     const page = await searchSkills(fetchImpl, { keyword: 'PDF 提取', category: 'office-efficiency', page: 2, pageSize: 10 })
-    expect(seenUrl).toContain('keyword=PDF%20%E6%8F%90%E5%8F%96')
-    expect(seenUrl).toContain('category=office-efficiency')
-    expect(seenUrl).toContain('page=2')
-    expect(seenUrl).toContain('pageSize=10')
-    expect(seenUrl).toContain('sortBy=score')
-    expect(page.total).toBe(42)
-    expect(page.items).toHaveLength(1)
-    expect(page.items[0]?.slug).toBe('pdf-image-text-extractor')
+    assert.ok(seenUrl.includes('keyword=PDF%20%E6%8F%90%E5%8F%96'))
+    assert.ok(seenUrl.includes('category=office-efficiency'))
+    assert.ok(seenUrl.includes('page=2'))
+    assert.ok(seenUrl.includes('pageSize=10'))
+    assert.ok(seenUrl.includes('sortBy=score'))
+    assert.strictEqual(page.total, 42)
+    assert.strictEqual(page.items.length, 1)
+    assert.strictEqual(page.items[0]?.slug, 'pdf-image-text-extractor')
   })
 
   it('非 2xx 抛 SkillHubHttpError', async () => {
     const fetchImpl: FetchLike = () => Promise.resolve(fakeResponse({}, 500))
-    await expect(searchSkills(fetchImpl, {})).rejects.toBeInstanceOf(SkillHubHttpError)
+    await assert.rejects(searchSkills(fetchImpl, {}), SkillHubHttpError)
   })
 })

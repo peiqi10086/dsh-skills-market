@@ -32,11 +32,17 @@ src/
 
 ```sh
 dsh plugin --profile web add dsh-skills-market
-# 或本地路径：
+# 本地路径：
 dsh plugin --profile web add ./dsh-skills-market
+# GitHub（建议锁定 commit，防止后续推送悄悄改变运行内容）：
+dsh plugin --profile web add github:peiqi10086/dsh-skills-market
+dsh plugin --profile web add github:peiqi10086/dsh-skills-market#<sha>
 ```
 
-安装后**重启** DSH Web（客户端 bundle 表在启动时扫描）。侧边栏底部出现「Skills 商城」入口。
+本包**提交构建产物 `lib/` 且不带 `prepare` 脚本**，因此从 GitHub 安装不需要 pnpm 的
+`allowBuilds` 构建授权——这是[官方发布文档](https://github.com/deepseek-harness/deepseek-harness)
+认可的「分发构建产物」方式。安装后**重启** DSH Web（客户端 bundle 表在启动时扫描），
+侧边栏底部出现「Skills 管理」入口（插件市场之下、Cordis Plugin 之上）。
 
 ## 模型工具 `dsh_skillhub_search`
 
@@ -58,12 +64,13 @@ dsh plugin --profile web add ./dsh-skills-market
 ```sh
 pnpm install
 pnpm build       # tsdown：lib/index.js（Host ESM）+ lib/client.js（浏览器 CJS 工厂包装）
-pnpm test        # vitest：SkillHub 映射 / frontmatter 解析 / zip 安装（含穿越防护）/ 移动删除
+pnpm test        # node:test（零测试框架依赖）：SkillHub 映射 / frontmatter 解析 / zip 安装（含穿越防护）/ 移动删除
 pnpm typecheck   # tsc --noEmit（strict）
 ```
 
 零 `@deepseek-ai/*` 运行时依赖（避免 cordis 双实例）；平台模块（react、ui-primitives）由
-DSH 加载器模块表在运行时应答；zip 解压用内联打包的 fflate。
+DSH 加载器模块表在运行时应答；zip 解压用内联打包的 fflate。测试使用 Node 内置
+`node:test`（type stripping 直跑 .ts），使 git 安装的依赖图不含任何构建脚本（无 esbuild）。
 
 ## License
 
