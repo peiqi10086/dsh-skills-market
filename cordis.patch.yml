@@ -1,0 +1,5 @@
+# dsh-skills-market 组合层：在 profile 组合上插入本包的 host 插件行。
+# 浏览器半不经由此文件——它由 package.json 的 dsh.client 声明 + exports["./client"] 被发现。
+- insert:
+    - id: skills-market
+      name: dsh-skills-market
