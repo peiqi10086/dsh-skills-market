@@ -205,6 +205,17 @@ export class SkillsStore {
     return key.startsWith('ws:') ? key.slice(3) : undefined
   }
 
+  /**
+   * 确保首屏数据已加载（已安装当前分组 + 安装标记清单 + 商城首页）。
+   * 浮窗经 openPanel 触发；better-sidebar tab 挂载时由 PanelBody 触发——
+   * 否则 tab 路径下没有任何入口触发初始加载，会一直停在"正在加载"。
+   */
+  ensureLoaded(): void {
+    void this.loadGroup()
+    this.ensureInstallGroups()
+    if (this.state.marketStatus === 'idle') void this.runMarketSearch(1)
+  }
+
   openPanel(): void {
     const firstOpen = !this.state.open
     // 打开时定位到当前工作区的页签；没有打开的工作区则回退用户级。

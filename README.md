@@ -14,7 +14,9 @@ DSH（DeepSeek Harness）Skills 管理 + SkillHub 商城：在 Web UI 侧边栏�
 
 ## 截图
 
-**已安装管理**（用户级 / 各工作区页签 / 内置只读，组内筛选与行内操作）：
+> 图为 better-sidebar 原生 tab 形态（未安装 better-sidebar 时为同款内容的浮动面板）。
+
+**已安装管理**（better-sidebar 右侧栏 tab：用户级 / 各工作区页签 / 内置只读，启停开关与删除确认条）：
 
 ![已安装管理](docs/images/panel-installed.png)
 

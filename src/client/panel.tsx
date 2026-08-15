@@ -527,6 +527,8 @@ function MarketView({ store, t }: SkillsInjectedProps) {
 export function PanelBody(props: SkillsInjectedProps) {
   const { store, t } = props
   const mainTab = useSkillsSelector(store, s => s.mainTab)
+  // better-sidebar tab 路径不经过 openPanel：挂载时触发首屏加载（幂等）。
+  useEffect(() => { store.ensureLoaded() }, [store])
   return (
     <div className="dshs-fill">
       <div className="dshs-maintabs">
