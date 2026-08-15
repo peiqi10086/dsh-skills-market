@@ -79,17 +79,39 @@ export function apply(ctx: ClientContextLike): void {
     return hasTab(record['splits']) || hasTab(record['bottomSplits'])
   }
 
-  /** 入口点击：有 better-sidebar → 注册后切换 tab 开/关；否则默认浮窗。 */
+  /** 快照里的右侧面板是否展开。 */
+  function bsPanelIsOpen(bs: BetterSidebarLike): boolean {
+    if (typeof bs.getSnapshot !== 'function') return false
+    const snapshot = bs.getSnapshot()
+    const state = snapshot === undefined ? undefined : snapshot.state
+    if (state === undefined || state === null) return false
+    return (state as Record<string, unknown>)['panelOpen'] === true
+  }
+
+  /**
+   * 折叠 better-sidebar 右侧面板：它没有暴露面板折叠 API，改为触发它自己的
+   * 折叠按钮（效果与用户手点完全一致，tab 状态保留）。
+   * 定位用其面板图标的固定 SVG 结构（rect x=10.5 width=2.75，与语言/样式哈希无关）。
+   */
+  function collapseBetterSidebarPanel(): boolean {
+    const buttons = document.querySelectorAll('button')
+    for (const button of buttons) {
+      if (button.querySelector('rect[x="10.5"][width="2.75"]') !== null) {
+        button.click()
+        return true
+      }
+    }
+    return false
+  }
+
+  /** 入口点击：有 better-sidebar → 注册后切换右侧面板开/关；否则默认浮窗。 */
   function openManager(): void {
     const bs = getBetterSidebar()
     if (bs !== undefined && typeof bs.registerTab === 'function') {
       ensureTabRegistered(bs)
       if (typeof bs.openTab === 'function') {
-        if (typeof bs.closeTab === 'function' && bsTabIsOpen(bs)) {
-          // 已打开 → 收回（关闭该 tab）。
-          bs.closeTab(BETTER_TAB_ID)
-          return
-        }
+        // 面板开着且本 tab 在树里 → 收回（折叠整个右侧面板，tab 保留在状态中）。
+        if (bsPanelIsOpen(bs) && bsTabIsOpen(bs) && collapseBetterSidebarPanel()) return
         // seed 带 path 才会触发 better-sidebar 的面板自动展开
         // （type-only 打开按它的设计不展开——面板行为归调用方）。
         bs.openTab({ type: BETTER_TAB_ID, path: BETTER_TAB_ID })
