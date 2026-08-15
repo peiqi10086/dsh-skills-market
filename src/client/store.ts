@@ -304,6 +304,40 @@ export class SkillsStore {
     this.set({ busy })
   }
 
+  /** 启停防抖定时器（rowKey → timer）与真实重载序号。 */
+  private toggleTimers: Record<string, ReturnType<typeof setTimeout> | undefined> = {}
+  private invocationSeq = 0
+
+  /**
+   * 启停开关（带防抖）：乐观补丁立即生效（界面即时翻转），400ms 内快速连点
+   * 合并为一次真实写入，避免抖动。
+   */
+  queueInvocationToggle(rowKey: string, body: Record<string, unknown>): void {
+    this.patchInvocation(body)
+    const prev = this.toggleTimers[rowKey]
+    if (prev !== undefined) clearTimeout(prev)
+    this.toggleTimers[rowKey] = setTimeout(() => {
+      delete this.toggleTimers[rowKey]
+      void this.runRowAction(rowKey, 'set-invocation', body)
+    }, 400)
+  }
+
+  /** 乐观更新：把新开关状态直接补丁进本地清单缓存（绕过 watcher 去抖延迟）。 */
+  private patchInvocation(body: Record<string, unknown>): void {
+    const patch: { modelInvocable?: boolean; userInvocable?: boolean } = {}
+    if (typeof body['modelInvocable'] === 'boolean') patch.modelInvocable = body['modelInvocable']
+    if (typeof body['userInvocable'] === 'boolean') patch.userInvocable = body['userInvocable']
+    const groupData: Record<string, GroupData | undefined> = {}
+    for (const [key, group] of Object.entries(this.state.groupData)) {
+      groupData[key] = group === undefined ? group : {
+        ...group,
+        skills: group.skills.map(s =>
+          s.dir === body['name'] && s.level === body['level'] ? { ...s, ...patch } : s),
+      }
+    }
+    this.set({ groupData })
+  }
+
   /** 行操作（删除 / 设为用户级 / 启停调用面）；完成后刷新本地清单。 */
   async runRowAction(rowKey: string, op: 'uninstall' | 'set-level' | 'set-invocation', body: Record<string, unknown>): Promise<void> {
     this.setBusy(rowKey, true)
@@ -315,23 +349,11 @@ export class SkillsStore {
       await callApi(op, payload)
       this.setBusy(rowKey, false)
       if (op === 'set-invocation') {
-        // 乐观更新：立刻把新开关补丁进缓存。skills 服务的文件 watcher 有去抖
-        // 延迟，立刻重载会读回旧状态——表现为"第一次点击没反应"。
-        const patch: { modelInvocable?: boolean; userInvocable?: boolean } = {}
-        if (typeof body['modelInvocable'] === 'boolean') patch.modelInvocable = body['modelInvocable']
-        if (typeof body['userInvocable'] === 'boolean') patch.userInvocable = body['userInvocable']
-        const groupData: Record<string, GroupData | undefined> = {}
-        for (const [key, group] of Object.entries(this.state.groupData)) {
-          groupData[key] = group === undefined ? group : {
-            ...group,
-            skills: group.skills.map(s =>
-              s.dir === body['name'] && s.level === body['level'] ? { ...s, ...patch } : s),
-          }
-        }
-        this.set({ groupData })
-        // watcher 去抖过后做一次真实重载对齐（结果应与乐观补丁一致）。
+        // 乐观补丁已由 queueInvocationToggle 打上；此处只做延迟真实重载。
+        // 重载不清空缓存（无闪烁），且只执行最后一次（防抖期间多次调用不叠加）。
+        const seq = ++this.invocationSeq
         setTimeout(() => {
-          this.set({ groupData: {} })
+          if (seq !== this.invocationSeq) return
           void this.loadGroup(true)
           this.ensureInstallGroups()
         }, 1500)

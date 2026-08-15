@@ -233,7 +233,7 @@ function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t:
                 disabled={isBusy}
                 title={enabled ? t('toggle.disable') : t('toggle.enable')}
                 onClick={() => {
-                  void store.runRowAction(rowKey, 'set-invocation', {
+                  void store.queueInvocationToggle(rowKey, {
                     name: item.dir,
                     level: item.level,
                     modelInvocable: !enabled,

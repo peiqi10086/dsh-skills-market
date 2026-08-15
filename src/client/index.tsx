@@ -48,25 +48,29 @@ export function apply(ctx: ClientContextLike): void {
   function ensureTabRegistered(bs: BetterSidebarLike): void {
     if (tabRegistered) return
     tabRegistered = true
-    ctx.effect(() => bs.registerTab({
-      id: BETTER_TAB_ID,
-      title: () => sharedT('entry.label'),
-      icon: (size: number) => h(IconSparkle16, { size }),
-      order: 60,
-      single: true,
-      component: () => h(PanelBody, { store, t: sharedT }),
-    }), 'skills-market: betterSidebar tab')
+    try {
+      ctx.effect(() => bs.registerTab({
+        id: BETTER_TAB_ID,
+        title: () => sharedT('entry.label'),
+        icon: (size: number) => h(IconSparkle16, { size }),
+        order: 60,
+        single: true,
+        component: () => h(PanelBody, { store, t: sharedT }),
+      }), 'skills-market: betterSidebar tab')
+    } catch {
+      // 已被注册（重复激活场景）：视为已注册即可。
+    }
   }
 
   /** 入口点击：有 better-sidebar → 注册并定向打开其 tab；否则默认浮窗。 */
   function openManager(): void {
     const bs = getBetterSidebar()
-    // 临时诊断（确认 better-sidebar 探测路径后移除）：在 DevTools console 可见。
-    console.log('[skills-market] openManager: betterSidebar =', bs === undefined ? 'absent' : `present(version=${String(bs.version)}) openTab=${typeof bs.openTab}`)
     if (bs !== undefined && typeof bs.registerTab === 'function') {
       ensureTabRegistered(bs)
       if (typeof bs.openTab === 'function') {
-        bs.openTab({ type: BETTER_TAB_ID })
+        // seed 带 path 才会触发 better-sidebar 的面板自动展开
+        // （type-only 打开按它的设计不展开——面板行为归调用方）。
+        bs.openTab({ type: BETTER_TAB_ID, path: BETTER_TAB_ID })
         return
       }
       // 旧版 better-sidebar 没有定向打开：tab 已进 + 菜单，同时退回浮窗。
@@ -74,9 +78,16 @@ export function apply(ctx: ClientContextLike): void {
     store.openPanel()
   }
 
-  // 服务可能已激活（组合顺序在前）：立即尝试注册；否则延迟到首次点击。
+  // 服务可能已激活（组合顺序在前）：立即注册。
   const early = getBetterSidebar()
   if (early !== undefined && typeof early.registerTab === 'function') ensureTabRegistered(early)
+  // 服务晚于本插件激活（bundle 顺序常态）：cordis 的 internal/service 事件在
+  // betterSidebar 被 provide 时触发，届时完成注册——无需用户先点一次。
+  ctx.on('internal/service', ((name: string, value: unknown) => {
+    if (name !== 'betterSidebar' || value === undefined || value === null) return
+    const bs = value as BetterSidebarLike
+    if (typeof bs.registerTab === 'function') ensureTabRegistered(bs)
+  }) as (...args: never[]) => void)
 
   /* ---------------- slot 注册 ---------------- */
 

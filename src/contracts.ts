@@ -160,8 +160,8 @@ export interface BetterSidebarTabDescriptor {
 export interface BetterSidebarLike {
   readonly version?: string
   registerTab(descriptor: BetterSidebarTabDescriptor): () => void
-  /** 定向打开一个已注册的 tab（seed.type = 注册的 id）。 */
-  openTab?(seed: { readonly type: string; readonly title?: string }, scope?: unknown): void
+  /** 定向打开一个已注册的 tab（seed.type = 注册的 id；带 path 才会触发面板自动展开）。 */
+  openTab?(seed: { readonly type: string; readonly title?: string; readonly path?: string }, scope?: unknown): void
 }
 
 /** Client 插件 apply 收到的上下文（最小面）。 */
@@ -172,6 +172,8 @@ export interface ClientContextLike {
   readonly workspaces: WorkspacesServiceLike
   get(name: string): unknown
   effect(setup: () => (() => void) | void, label?: string): void
+  /** cordis 事件监听（随 fiber 自动回收）。 */
+  on(name: string, listener: (...args: never[]) => void): () => void
 }
 
 /** slot 组件收到的 t 函数。 */
