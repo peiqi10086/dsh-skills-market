@@ -162,6 +162,10 @@ export interface BetterSidebarLike {
   registerTab(descriptor: BetterSidebarTabDescriptor): () => void
   /** 定向打开一个已注册的 tab（seed.type = 注册的 id；带 path 才会触发面板自动展开）。 */
   openTab?(seed: { readonly type: string; readonly title?: string; readonly path?: string }, scope?: unknown): void
+  /** 按 tab id 关闭一个打开的 tab。 */
+  closeTab?(tabId: string, scope?: unknown): void
+  /** 当前快照：{ sessionId, state: { splits, bottomSplits, panelOpen, ... } | undefined, prefs }。 */
+  getSnapshot?(): { readonly sessionId?: string; readonly state?: unknown }
 }
 
 /** Client 插件 apply 收到的上下文（最小面）。 */

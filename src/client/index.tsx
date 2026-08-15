@@ -62,12 +62,34 @@ export function apply(ctx: ClientContextLike): void {
     }
   }
 
-  /** 入口点击：有 better-sidebar → 注册并定向打开其 tab；否则默认浮窗。 */
+  /** 在 better-sidebar 的状态树（splits / bottomSplits）里查找本插件的 tab 是否打开。 */
+  function bsTabIsOpen(bs: BetterSidebarLike): boolean {
+    if (typeof bs.getSnapshot !== 'function') return false
+    const snapshot = bs.getSnapshot()
+    const state = snapshot === undefined ? undefined : snapshot.state
+    if (state === undefined || state === null) return false
+    const hasTab = (node: unknown): boolean => {
+      if (node === null || node === undefined || typeof node !== 'object') return false
+      if (Array.isArray(node)) return node.some(hasTab)
+      const record = node as Record<string, unknown>
+      if (record['id'] === BETTER_TAB_ID && record['type'] === BETTER_TAB_ID) return true
+      return hasTab(record['tabs']) || hasTab(record['children'])
+    }
+    const record = state as Record<string, unknown>
+    return hasTab(record['splits']) || hasTab(record['bottomSplits'])
+  }
+
+  /** 入口点击：有 better-sidebar → 注册后切换 tab 开/关；否则默认浮窗。 */
   function openManager(): void {
     const bs = getBetterSidebar()
     if (bs !== undefined && typeof bs.registerTab === 'function') {
       ensureTabRegistered(bs)
       if (typeof bs.openTab === 'function') {
+        if (typeof bs.closeTab === 'function' && bsTabIsOpen(bs)) {
+          // 已打开 → 收回（关闭该 tab）。
+          bs.closeTab(BETTER_TAB_ID)
+          return
+        }
         // seed 带 path 才会触发 better-sidebar 的面板自动展开
         // （type-only 打开按它的设计不展开——面板行为归调用方）。
         bs.openTab({ type: BETTER_TAB_ID, path: BETTER_TAB_ID })
