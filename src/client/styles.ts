@@ -221,6 +221,28 @@ div:has(> [data-slot="sidebar.footer.action"]) {
   background: var(--dsw-alias-bg-layer-2);
 }
 .dshs-row.readonly { opacity: 0.72; }
+.dshs-row.dimmed { border-style: dashed; }
+.dshs-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-state-success-primary);
+  border-radius: 999px;
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 120ms var(--ds-ease-in-out);
+}
+.dshs-toggle:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+.dshs-toggle:disabled { opacity: 0.5; cursor: default; }
+.dshs-toggle.off {
+  border-color: var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
 .dshs-row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .dshs-name { font-weight: 600; color: var(--dsw-alias-state-business-primary); }
 .dshs-badge {

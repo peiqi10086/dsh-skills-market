@@ -32,6 +32,7 @@ import {
   projectSkillsDir,
   removeSkill,
   scanSkillsDir,
+  setSkillInvocation,
   userSkillsDir,
 } from './core/local.ts'
 
@@ -108,6 +109,10 @@ interface LocalSkillPayload {
   readonly dir: string
   readonly name: string
   readonly description: string
+  /** 模型（AI）调用面是否启用（默认 true）。 */
+  readonly modelInvocable: boolean
+  /** 用户（/name 手势）调用面是否启用（默认 true）。 */
+  readonly userInvocable: boolean
 }
 
 /** 优先走 skills 服务（带来源信息，可区分内置只读）；服务缺失时退化为目录扫描。 */
@@ -145,6 +150,8 @@ async function listLocal(ctx: HostContext, cwd: string | undefined): Promise<Api
         dir,
         name: s.name,
         description: s.description,
+        modelInvocable: s.invocation?.modelInvocable ?? true,
+        userInvocable: s.invocation?.userInvocable ?? true,
       }
     })
     return { ok: true, skills, projectDir, userDir, workspaceRoot: base }
@@ -161,6 +168,8 @@ async function listLocal(ctx: HostContext, cwd: string | undefined): Promise<Api
     dir: row.dir,
     name: row.name,
     description: row.description,
+    modelInvocable: row.modelInvocable,
+    userInvocable: row.userInvocable,
   }))
   return { ok: true, skills, projectDir, userDir, workspaceRoot: base }
 }
@@ -222,6 +231,17 @@ async function handleApi(ctx: HostContext, req: IncomingMessage, res: ServerResp
       const fromRoot = to === 'project' ? userSkillsDir() : projectSkillsDir(cwd ?? process.cwd())
       const path = await moveSkill(fromRoot, toRoot, name)
       sendJson(res, { ok: true, path })
+      return
+    }
+    if (sub === '/set-invocation') {
+      const name = bodyString(body, 'name')
+      if (name === undefined) throw new Error('missing name')
+      // 布尔开关：缺省表示不改动该面。
+      const flags: { modelInvocable?: boolean; userInvocable?: boolean } = {}
+      if (typeof body['modelInvocable'] === 'boolean') flags.modelInvocable = body['modelInvocable']
+      if (typeof body['userInvocable'] === 'boolean') flags.userInvocable = body['userInvocable']
+      await setSkillInvocation(levelRoot(bodyString(body, 'level') ?? '', cwd), name, flags)
+      sendJson(res, { ok: true })
       return
     }
     sendJson(res, { ok: false, error: 'unknown-endpoint' })

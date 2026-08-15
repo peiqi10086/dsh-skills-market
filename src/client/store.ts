@@ -28,6 +28,10 @@ export interface LocalSkill {
   readonly dir: string
   readonly name: string
   readonly description: string
+  /** 模型（AI）调用面是否启用。 */
+  readonly modelInvocable: boolean
+  /** 用户（/name 手势）调用面是否启用。 */
+  readonly userInvocable: boolean
 }
 
 export interface GroupData {
@@ -300,8 +304,8 @@ export class SkillsStore {
     this.set({ busy })
   }
 
-  /** 行操作（卸载 / 设为用户级）；完成后清缓存重载当前分组。 */
-  async runRowAction(rowKey: string, op: 'uninstall' | 'set-level', body: Record<string, unknown>): Promise<void> {
+  /** 行操作（卸载 / 设为用户级 / 启停调用面）；完成后清缓存重载当前分组。 */
+  async runRowAction(rowKey: string, op: 'uninstall' | 'set-level' | 'set-invocation', body: Record<string, unknown>): Promise<void> {
     this.setBusy(rowKey, true)
     this.set({ confirmKey: '' })
     try {

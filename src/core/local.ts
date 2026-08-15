@@ -43,6 +43,10 @@ export interface LocalSkillRow {
   readonly dir: string
   readonly name: string
   readonly description: string
+  /** 模型（AI）调用面是否启用（默认 true）。 */
+  readonly modelInvocable: boolean
+  /** 用户（/name 手势）调用面是否启用（默认 true）。 */
+  readonly userInvocable: boolean
 }
 
 /** 从 SKILL.md 文本提取 frontmatter 的 name/description（逐行、前 60 行内）。 */
@@ -58,6 +62,57 @@ export function parseSkillFrontmatter(text: string): { name?: string; descriptio
   return out
 }
 
+/** frontmatter 布尔值（与 dsh 解析一致：boolean / 1 / 0 / true|yes|on / false|no|off，不区分大小写）。 */
+function frontmatterTruthy(value: string): boolean | undefined {
+  const v = value.trim().toLowerCase()
+  if (v === 'true' || v === 'yes' || v === 'on' || v === '1') return true
+  if (v === 'false' || v === 'no' || v === 'off' || v === '0') return false
+  return undefined
+}
+
+/** 从 SKILL.md 文本提取调用面开关（缺省两面启用；与 dsh parseInvocationPolicy 同语义）。 */
+export function parseInvocation(text: string): { modelInvocable: boolean; userInvocable: boolean } {
+  let modelInvocable = true
+  let userInvocable = true
+  for (const line of text.split(/\r?\n/).slice(0, 80)) {
+    const disableModel = /^disable-model-invocation\s*:\s*(.+?)\s*$/.exec(line)
+    if (disableModel !== null) {
+      const v = frontmatterTruthy(disableModel[1] ?? '')
+      if (v !== undefined) modelInvocable = !v
+    }
+    const userKey = /^user-invocable\s*:\s*(.+?)\s*$/.exec(line)
+    if (userKey !== null) {
+      const v = frontmatterTruthy(userKey[1] ?? '')
+      if (v !== undefined) userInvocable = v
+    }
+  }
+  return { modelInvocable, userInvocable }
+}
+
+/** 改写 SKILL.md frontmatter 的调用面开关；启用时移除对应行（缺省即启用）。 */
+export async function setSkillInvocation(
+  root: string,
+  name: string,
+  flags: { modelInvocable?: boolean; userInvocable?: boolean },
+): Promise<void> {
+  if (!isSkillName(name)) throw new Error(`invalid skill name: ${name}`)
+  const file = join(root, name, 'SKILL.md')
+  if (!existsSync(file)) throw new Error(`skill not found: ${name}`)
+  const lines = (await readFile(file, 'utf8')).split(/\r?\n/)
+  if (lines[0]?.trim() !== '---') throw new Error('SKILL.md has no YAML frontmatter')
+  let end = -1
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i]?.trim() === '---') { end = i; break }
+  }
+  if (end < 0) throw new Error('SKILL.md frontmatter is not closed')
+  const head = lines
+    .slice(1, end)
+    .filter(line => !/^(disable-model-invocation|user-invocable)\s*:/.test(line))
+  if (flags.modelInvocable === false) head.push('disable-model-invocation: true')
+  if (flags.userInvocable === false) head.push('user-invocable: false')
+  await writeFile(file, ['---', ...head, ...lines.slice(end)].join('\n'))
+}
+
 /** 扫描一个 skills 根目录（不存在的目录返回空表）。 */
 export async function scanSkillsDir(root: string, level: 'project' | 'user'): Promise<LocalSkillRow[]> {
   if (!existsSync(root)) return []
@@ -69,14 +124,20 @@ export async function scanSkillsDir(root: string, level: 'project' | 'user'): Pr
     if (!existsSync(skillFile)) continue
     let name = entry.name
     let description = ''
+    let modelInvocable = true
+    let userInvocable = true
     try {
-      const parsed = parseSkillFrontmatter(await readFile(skillFile, 'utf8'))
+      const text = await readFile(skillFile, 'utf8')
+      const parsed = parseSkillFrontmatter(text)
       if (parsed.name !== undefined) name = parsed.name
       if (parsed.description !== undefined) description = parsed.description
+      const invocation = parseInvocation(text)
+      modelInvocable = invocation.modelInvocable
+      userInvocable = invocation.userInvocable
     } catch {
       // 读取失败时保留目录名兜底。
     }
-    rows.push({ level, dir: entry.name, name, description })
+    rows.push({ level, dir: entry.name, name, description, modelInvocable, userInvocable })
   }
   return rows
 }

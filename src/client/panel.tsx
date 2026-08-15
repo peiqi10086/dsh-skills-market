@@ -178,6 +178,26 @@ function Pagination({ page, totalPages, disabled, perPage, perPageOptions, onPag
   )
 }
 
+/** 调用面开关小胶囊（AI 调用 / 用户调用；点击翻转 frontmatter 开关）。 */
+function InvocationToggle({ label, enabled, disabled, onToggle }: {
+  label: string
+  enabled: boolean
+  disabled: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`dshs-toggle${enabled ? '' : ' off'}`}
+      disabled={disabled}
+      title={label}
+      onClick={onToggle}
+    >
+      {label}：{enabled ? '✓' : '✕'}
+    </button>
+  )
+}
+
 /** 已安装：单条 skill 行。 */
 function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t: TranslateFn }) {
   const busy = useSkillsSelector(store, s => s.busy)
@@ -185,8 +205,9 @@ function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t:
   const rowKey = `${item.level}:${item.dir}`
   const isBusy = busy[rowKey] === true
   const confirming = confirmKey === rowKey
+  const fullyEnabled = item.modelInvocable && item.userInvocable
   return (
-    <div className={item.manageable ? 'dshs-row' : 'dshs-row readonly'}>
+    <div className={`dshs-row${item.manageable ? '' : ' readonly'}${fullyEnabled ? '' : ' dimmed'}`}>
       <div className="dshs-row-head">
         <span className="dshs-name">{item.name}</span>
         {item.level === 'project' || item.level === 'user'
@@ -195,11 +216,37 @@ function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t:
         {!item.manageable
           ? <span className="dshs-badge">{sourceLabel(item.source, t)} · {t('readonly')}</span>
           : null}
+        {!item.modelInvocable ? <span className="dshs-badge">{t('invoke.modelOffBadge')}</span> : null}
+        {!item.userInvocable ? <span className="dshs-badge">{t('invoke.userOffBadge')}</span> : null}
       </div>
       <div className="dshs-desc">{item.description !== '' ? item.description : t('noDescription')}</div>
       {item.manageable
         ? (
           <div className="dshs-actions">
+            <InvocationToggle
+              label={t('invoke.model')}
+              enabled={item.modelInvocable}
+              disabled={isBusy}
+              onToggle={() => {
+                void store.runRowAction(rowKey, 'set-invocation', {
+                  name: item.dir,
+                  level: item.level,
+                  modelInvocable: !item.modelInvocable,
+                })
+              }}
+            />
+            <InvocationToggle
+              label={t('invoke.user')}
+              enabled={item.userInvocable}
+              disabled={isBusy}
+              onToggle={() => {
+                void store.runRowAction(rowKey, 'set-invocation', {
+                  name: item.dir,
+                  level: item.level,
+                  userInvocable: !item.userInvocable,
+                })
+              }}
+            />
             {item.level === 'project'
               ? (
                 <button

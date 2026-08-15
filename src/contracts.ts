@@ -58,6 +58,7 @@ export interface SkillSummaryLike {
   readonly name: string
   readonly description: string
   readonly source: string
+  readonly invocation?: { readonly modelInvocable: boolean; readonly userInvocable: boolean }
   readonly resourceBase?: { readonly kind: string; readonly path?: string }
 }
 
