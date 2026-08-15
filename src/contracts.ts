@@ -164,7 +164,9 @@ export interface BetterSidebarLike {
   openTab?(seed: { readonly type: string; readonly title?: string; readonly path?: string }, scope?: unknown): void
   /** 按 tab id 关闭一个打开的 tab。 */
   closeTab?(tabId: string, scope?: unknown): void
-  /** 当前快照：{ sessionId, state: { splits, bottomSplits, panelOpen, ... } | undefined, prefs }。 */
+  /** 聚焦一个打开的 tab（tab 栏激活路径，触发 onActivate）。 */
+  activateTab?(tabId: string, scope?: unknown): void
+  /** 当前快照：{ sessionId, state: { splits, bottomSplits, panelOpen, bottomOpen, ... } | undefined, prefs }。 */
   getSnapshot?(): { readonly sessionId?: string; readonly state?: unknown }
 }
 

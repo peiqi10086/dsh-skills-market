@@ -62,12 +62,15 @@ export function apply(ctx: ClientContextLike): void {
     }
   }
 
-  /** 在 better-sidebar 的状态树（splits / bottomSplits）里查找本插件的 tab 是否打开。 */
-  function bsTabIsOpen(bs: BetterSidebarLike): boolean {
-    if (typeof bs.getSnapshot !== 'function') return false
+  /** 本插件 tab 在 better-sidebar 里的位置：右侧栏 / 底部面板 / 未打开。 */
+  type TabLocation = 'right' | 'bottom' | 'closed'
+
+  /** 在状态树里查找本 tab 的位置。 */
+  function bsTabLocation(bs: BetterSidebarLike): TabLocation {
+    if (typeof bs.getSnapshot !== 'function') return 'closed'
     const snapshot = bs.getSnapshot()
     const state = snapshot === undefined ? undefined : snapshot.state
-    if (state === undefined || state === null) return false
+    if (state === undefined || state === null) return 'closed'
     const hasTab = (node: unknown): boolean => {
       if (node === null || node === undefined || typeof node !== 'object') return false
       if (Array.isArray(node)) return node.some(hasTab)
@@ -76,27 +79,31 @@ export function apply(ctx: ClientContextLike): void {
       return hasTab(record['tabs']) || hasTab(record['children'])
     }
     const record = state as Record<string, unknown>
-    return hasTab(record['splits']) || hasTab(record['bottomSplits'])
+    if (hasTab(record['splits'])) return 'right'
+    if (hasTab(record['bottomSplits'])) return 'bottom'
+    return 'closed'
   }
 
-  /** 快照里的右侧面板是否展开。 */
-  function bsPanelIsOpen(bs: BetterSidebarLike): boolean {
+  /** 快照里指定面板（panelOpen 右侧栏 / bottomOpen 底部面板）是否展开。 */
+  function bsPanelIsOpen(bs: BetterSidebarLike, key: 'panelOpen' | 'bottomOpen'): boolean {
     if (typeof bs.getSnapshot !== 'function') return false
     const snapshot = bs.getSnapshot()
     const state = snapshot === undefined ? undefined : snapshot.state
     if (state === undefined || state === null) return false
-    return (state as Record<string, unknown>)['panelOpen'] === true
+    return (state as Record<string, unknown>)[key] === true
   }
 
   /**
-   * 折叠 better-sidebar 右侧面板：它没有暴露面板折叠 API，改为触发它自己的
-   * 折叠按钮（效果与用户手点完全一致，tab 状态保留）。
-   * 定位用其面板图标的固定 SVG 结构（rect x=10.5 width=2.75，与语言/样式哈希无关）。
+   * 触发 better-sidebar 自己的面板折叠/展开按钮（它没有暴露面板开关 API，
+   * 效果与用户手点完全一致，tab 状态保留）。
+   * 定位用其面板图标的固定 SVG 结构（与语言/样式哈希无关）：
+   * 右侧栏 IconPanelRightOutline16 → rect x=10.5 width=2.75；
+   * 底部面板 IconPanelBottomOutline16 → rect x=3.25 width=9.5。
    */
-  function collapseBetterSidebarPanel(): boolean {
+  function clickPanelToggle(rectX: string, rectWidth: string): boolean {
     const buttons = document.querySelectorAll('button')
     for (const button of buttons) {
-      if (button.querySelector('rect[x="10.5"][width="2.75"]') !== null) {
+      if (button.querySelector(`rect[x="${rectX}"][width="${rectWidth}"]`) !== null) {
         button.click()
         return true
       }
@@ -104,16 +111,35 @@ export function apply(ctx: ClientContextLike): void {
     return false
   }
 
-  /** 入口点击：有 better-sidebar → 注册后切换右侧面板开/关；否则默认浮窗。 */
+  const RIGHT_TOGGLE: readonly [string, string] = ['10.5', '2.75']
+  const BOTTOM_TOGGLE: readonly [string, string] = ['3.25', '9.5']
+
+  /** 入口点击：有 better-sidebar → 切换本 tab 所在工作台的开/关；否则默认浮窗。 */
   function openManager(): void {
     const bs = getBetterSidebar()
     if (bs !== undefined && typeof bs.registerTab === 'function') {
       ensureTabRegistered(bs)
       if (typeof bs.openTab === 'function') {
-        // 面板开着且本 tab 在树里 → 收回（折叠整个右侧面板，tab 保留在状态中）。
-        if (bsPanelIsOpen(bs) && bsTabIsOpen(bs) && collapseBetterSidebarPanel()) return
-        // seed 带 path 才会触发 better-sidebar 的面板自动展开
-        // （type-only 打开按它的设计不展开——面板行为归调用方）。
+        const location = bsTabLocation(bs)
+        if (location === 'right') {
+          // tab 在右侧栏：面板开着 → 折叠右侧栏（tab 保留）；关着 → openTab 展开
+          if (bsPanelIsOpen(bs, 'panelOpen') && clickPanelToggle(...RIGHT_TOGGLE)) return
+        } else if (location === 'bottom') {
+          if (bsPanelIsOpen(bs, 'bottomOpen')) {
+            // tab 在底部面板且面板开着 → 折叠底部面板（tab 保留）
+            if (clickPanelToggle(...BOTTOM_TOGGLE)) return
+          } else if (clickPanelToggle(...BOTTOM_TOGGLE)) {
+            // 底部面板关着 → 展开并聚焦本 tab
+            if (typeof bs.activateTab === 'function') bs.activateTab(BETTER_TAB_ID)
+            return
+          }
+        } else {
+          // tab 未打开：seed 带 path 才会触发 better-sidebar 的面板自动展开
+          // （type-only 打开按它的设计不展开——面板行为归调用方）。
+          bs.openTab({ type: BETTER_TAB_ID, path: BETTER_TAB_ID })
+          return
+        }
+        // 兜底（折叠按钮未找到等）：保持可用，走 openTab
         bs.openTab({ type: BETTER_TAB_ID, path: BETTER_TAB_ID })
         return
       }
