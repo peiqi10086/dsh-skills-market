@@ -304,7 +304,7 @@ export class SkillsStore {
     this.set({ busy })
   }
 
-  /** 行操作（卸载 / 设为用户级 / 启停调用面）；完成后清缓存重载当前分组。 */
+  /** 行操作（删除 / 设为用户级 / 启停调用面）；完成后刷新本地清单。 */
   async runRowAction(rowKey: string, op: 'uninstall' | 'set-level' | 'set-invocation', body: Record<string, unknown>): Promise<void> {
     this.setBusy(rowKey, true)
     this.set({ confirmKey: '' })
@@ -314,6 +314,29 @@ export class SkillsStore {
       if (cwd !== undefined) payload['cwd'] = cwd
       await callApi(op, payload)
       this.setBusy(rowKey, false)
+      if (op === 'set-invocation') {
+        // 乐观更新：立刻把新开关补丁进缓存。skills 服务的文件 watcher 有去抖
+        // 延迟，立刻重载会读回旧状态——表现为"第一次点击没反应"。
+        const patch: { modelInvocable?: boolean; userInvocable?: boolean } = {}
+        if (typeof body['modelInvocable'] === 'boolean') patch.modelInvocable = body['modelInvocable']
+        if (typeof body['userInvocable'] === 'boolean') patch.userInvocable = body['userInvocable']
+        const groupData: Record<string, GroupData | undefined> = {}
+        for (const [key, group] of Object.entries(this.state.groupData)) {
+          groupData[key] = group === undefined ? group : {
+            ...group,
+            skills: group.skills.map(s =>
+              s.dir === body['name'] && s.level === body['level'] ? { ...s, ...patch } : s),
+          }
+        }
+        this.set({ groupData })
+        // watcher 去抖过后做一次真实重载对齐（结果应与乐观补丁一致）。
+        setTimeout(() => {
+          this.set({ groupData: {} })
+          void this.loadGroup(true)
+          this.ensureInstallGroups()
+        }, 1500)
+        return
+      }
       this.set({ groupData: {} })
       await this.loadGroup(true)
       // 变更后重建本地清单，商城的安装标记随即与磁盘一致。

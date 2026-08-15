@@ -61,6 +61,8 @@ export function apply(ctx: ClientContextLike): void {
   /** 入口点击：有 better-sidebar → 注册并定向打开其 tab；否则默认浮窗。 */
   function openManager(): void {
     const bs = getBetterSidebar()
+    // 临时诊断（确认 better-sidebar 探测路径后移除）：在 DevTools console 可见。
+    console.log('[skills-market] openManager: betterSidebar =', bs === undefined ? 'absent' : `present(version=${String(bs.version)}) openTab=${typeof bs.openTab}`)
     if (bs !== undefined && typeof bs.registerTab === 'function') {
       ensureTabRegistered(bs)
       if (typeof bs.openTab === 'function') {
