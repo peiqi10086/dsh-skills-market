@@ -243,6 +243,11 @@ div:has(> [data-slot="sidebar.footer.action"]) {
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
 }
+.dshs-confirm-hint {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  margin-right: 4px;
+}
 .dshs-row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .dshs-name { font-weight: 600; color: var(--dsw-alias-state-business-primary); }
 .dshs-badge {

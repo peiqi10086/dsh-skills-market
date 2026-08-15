@@ -178,36 +178,16 @@ function Pagination({ page, totalPages, disabled, perPage, perPageOptions, onPag
   )
 }
 
-/** 调用面开关小胶囊（AI 调用 / 用户调用；点击翻转 frontmatter 开关）。 */
-function InvocationToggle({ label, enabled, disabled, onToggle }: {
-  label: string
-  enabled: boolean
-  disabled: boolean
-  onToggle: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className={`dshs-toggle${enabled ? '' : ' off'}`}
-      disabled={disabled}
-      title={label}
-      onClick={onToggle}
-    >
-      {label}：{enabled ? '✓' : '✕'}
-    </button>
-  )
-}
-
-/** 已安装：单条 skill 行。 */
+/** 已安装：单条 skill 行。启停为单开关（同时控制 AI 调用与 /name 用户调用两面）。 */
 function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t: TranslateFn }) {
   const busy = useSkillsSelector(store, s => s.busy)
   const confirmKey = useSkillsSelector(store, s => s.confirmKey)
   const rowKey = `${item.level}:${item.dir}`
   const isBusy = busy[rowKey] === true
   const confirming = confirmKey === rowKey
-  const fullyEnabled = item.modelInvocable && item.userInvocable
+  const enabled = item.modelInvocable && item.userInvocable
   return (
-    <div className={`dshs-row${item.manageable ? '' : ' readonly'}${fullyEnabled ? '' : ' dimmed'}`}>
+    <div className={`dshs-row${item.manageable ? '' : ' readonly'}${enabled ? '' : ' dimmed'}`}>
       <div className="dshs-row-head">
         <span className="dshs-name">{item.name}</span>
         {item.level === 'project' || item.level === 'user'
@@ -216,62 +196,73 @@ function SkillRow({ item, store, t }: { item: LocalSkill; store: SkillsStore; t:
         {!item.manageable
           ? <span className="dshs-badge">{sourceLabel(item.source, t)} · {t('readonly')}</span>
           : null}
-        {!item.modelInvocable ? <span className="dshs-badge">{t('invoke.modelOffBadge')}</span> : null}
-        {!item.userInvocable ? <span className="dshs-badge">{t('invoke.userOffBadge')}</span> : null}
+        {!enabled ? <span className="dshs-badge">{t('badge.disabled')}</span> : null}
       </div>
       <div className="dshs-desc">{item.description !== '' ? item.description : t('noDescription')}</div>
       {item.manageable
-        ? (
-          <div className="dshs-actions">
-            <InvocationToggle
-              label={t('invoke.model')}
-              enabled={item.modelInvocable}
-              disabled={isBusy}
-              onToggle={() => {
-                void store.runRowAction(rowKey, 'set-invocation', {
-                  name: item.dir,
-                  level: item.level,
-                  modelInvocable: !item.modelInvocable,
-                })
-              }}
-            />
-            <InvocationToggle
-              label={t('invoke.user')}
-              enabled={item.userInvocable}
-              disabled={isBusy}
-              onToggle={() => {
-                void store.runRowAction(rowKey, 'set-invocation', {
-                  name: item.dir,
-                  level: item.level,
-                  userInvocable: !item.userInvocable,
-                })
-              }}
-            />
-            {item.level === 'project'
-              ? (
-                <button
-                  type="button"
-                  className="dshs-btn ghost"
-                  disabled={isBusy}
-                  onClick={() => { void store.runRowAction(rowKey, 'set-level', { name: item.dir, to: 'user' }) }}
-                >
-                  {isBusy ? t('action.working') : t('action.promote')}
-                </button>
-              )
-              : null}
-            <button
-              type="button"
-              className="dshs-btn danger"
-              disabled={isBusy}
-              onClick={() => {
-                if (confirming) void store.runRowAction(rowKey, 'uninstall', { name: item.dir, level: item.level })
-                else store.setConfirmKey(rowKey)
-              }}
-            >
-              {confirming ? t('action.confirmUninstall') : t('action.uninstall')}
-            </button>
-          </div>
-        )
+        ? confirming
+          ? (
+            /* 删除确认条：提示 + 确认删除 / 取消 */
+            <div className="dshs-actions">
+              <span className="dshs-confirm-hint">{t('action.deleteHint')}</span>
+              <button
+                type="button"
+                className="dshs-btn danger"
+                disabled={isBusy}
+                onClick={() => { void store.runRowAction(rowKey, 'uninstall', { name: item.dir, level: item.level }) }}
+              >
+                {isBusy ? t('action.working') : t('action.deleteConfirm')}
+              </button>
+              <button
+                type="button"
+                className="dshs-btn ghost"
+                disabled={isBusy}
+                onClick={() => { store.setConfirmKey('') }}
+              >
+                {t('action.cancel')}
+              </button>
+            </div>
+          )
+          : (
+            <div className="dshs-actions">
+              <button
+                type="button"
+                className={`dshs-toggle${enabled ? '' : ' off'}`}
+                disabled={isBusy}
+                title={enabled ? t('toggle.disable') : t('toggle.enable')}
+                onClick={() => {
+                  void store.runRowAction(rowKey, 'set-invocation', {
+                    name: item.dir,
+                    level: item.level,
+                    modelInvocable: !enabled,
+                    userInvocable: !enabled,
+                  })
+                }}
+              >
+                {isBusy ? t('action.working') : `${enabled ? t('toggle.enabled') : t('toggle.disabled')} ${enabled ? '✓' : '✕'}`}
+              </button>
+              {item.level === 'project'
+                ? (
+                  <button
+                    type="button"
+                    className="dshs-btn ghost"
+                    disabled={isBusy}
+                    onClick={() => { void store.runRowAction(rowKey, 'set-level', { name: item.dir, to: 'user' }) }}
+                  >
+                    {isBusy ? t('action.working') : t('action.promote')}
+                  </button>
+                )
+                : null}
+              <button
+                type="button"
+                className="dshs-btn danger"
+                disabled={isBusy}
+                onClick={() => { store.setConfirmKey(rowKey) }}
+              >
+                {t('action.delete')}
+              </button>
+            </div>
+          )
         : null}
     </div>
   )
