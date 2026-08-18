@@ -62,7 +62,7 @@ function fmtCount(n: number): string {
 }
 
 /** 翻页/切分组时把滚动容器归零（否则换页后仍停在原滚动位置）。 */
-function useScrollTopOnPage(...deps: unknown[]): React.RefObject<HTMLDivElement | null> {
+function useScrollTopOnPage(...deps: unknown[]): React.RefObject<HTMLDivElement> {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { if (ref.current !== null) ref.current.scrollTop = 0 }, deps)
   return ref
@@ -305,9 +305,9 @@ function InstalledView({ store, t }: SkillsInjectedProps) {
       || s.dir.toLowerCase().includes(gq)
       || s.description.toLowerCase().includes(gq))
   const totalPages = Math.max(1, Math.ceil(items.length / snapshot.groupPerPage))
+  const safePage = Math.min(snapshot.groupPage, totalPages)
   // 翻页/切分组/筛选时滚动归零。
   const bodyRef = useScrollTopOnPage(safePage, snapshot.groupKey, gq)
-  const safePage = Math.min(snapshot.groupPage, totalPages)
   const pageItems = items.slice((safePage - 1) * snapshot.groupPerPage, safePage * snapshot.groupPerPage)
   return (
     <>
