@@ -2,7 +2,7 @@
  * 面板组件：sidebar.footer.action 入口按钮 + shell.overlay 浮动面板。
  * 所有文案经 t()（注册项 locale: NS），所有颜色走 --dsw-alias-* 令牌（styles.ts）。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   IconCloseOutline16,
   IconDownloadOutline16,
@@ -59,6 +59,13 @@ export function SkillsEntry({ wide, store, t, onOpen }: SkillsEntryProps) {
 
 function fmtCount(n: number): string {
   return n >= 10000 ? `${(n / 10000).toFixed(1)} 万` : String(n)
+}
+
+/** 翻页/切分组时把滚动容器归零（否则换页后仍停在原滚动位置）。 */
+function useScrollTopOnPage(...deps: unknown[]): React.RefObject<HTMLDivElement | null> {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (ref.current !== null) ref.current.scrollTop = 0 }, deps)
+  return ref
 }
 
 function sourceLabel(source: string, t: TranslateFn): string {
@@ -298,6 +305,8 @@ function InstalledView({ store, t }: SkillsInjectedProps) {
       || s.dir.toLowerCase().includes(gq)
       || s.description.toLowerCase().includes(gq))
   const totalPages = Math.max(1, Math.ceil(items.length / snapshot.groupPerPage))
+  // 翻页/切分组/筛选时滚动归零。
+  const bodyRef = useScrollTopOnPage(safePage, snapshot.groupKey, gq)
   const safePage = Math.min(snapshot.groupPage, totalPages)
   const pageItems = items.slice((safePage - 1) * snapshot.groupPerPage, safePage * snapshot.groupPerPage)
   return (
@@ -340,7 +349,7 @@ function InstalledView({ store, t }: SkillsInjectedProps) {
       {data !== undefined && snapshot.groupKey === 'user'
         ? <div className="dshs-pathhint">{t('group.userDir', { path: data.userDir })}</div>
         : null}
-      <div className="dshs-body">
+      <div className="dshs-body" ref={bodyRef}>
         {data === undefined || snapshot.groupStatus === 'loading'
           ? <div className="dshs-state">{t('group.loading')}</div>
           : items.length === 0
@@ -447,6 +456,8 @@ function MarketView({ store, t }: SkillsInjectedProps) {
   const snapshot = useSkillsSelector(store, s => s)
   const loading = snapshot.marketStatus === 'loading'
   const totalPages = Math.max(1, Math.ceil(snapshot.marketTotal / snapshot.marketPerPage))
+  // 翻页/切分类排序时滚动归零。
+  const bodyRef = useScrollTopOnPage(snapshot.marketPage, snapshot.category, snapshot.sortBy)
   return (
     <>
       <div className="dshs-toolbar">
@@ -492,7 +503,7 @@ function MarketView({ store, t }: SkillsInjectedProps) {
       {snapshot.marketStatus === 'error'
         ? <div className="dshs-error">{t('search.error', { message: snapshot.marketError ?? 'unknown' })}</div>
         : null}
-      <div className="dshs-body">
+      <div className="dshs-body" ref={bodyRef}>
         {loading && snapshot.marketItems.length === 0
           ? <div className="dshs-state">{t('search.searching')}</div>
           : snapshot.marketItems.length === 0
