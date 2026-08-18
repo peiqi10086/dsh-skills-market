@@ -1,6 +1,6 @@
 /**
  * @deepseek-ai/dsh-client-ui-primitives 的 ambient 声明（平台模块，运行时由加载器模块表应答）。
- * 仅声明本插件用到的导出，逐条对照 0.1.0-rc.6 源码（icons/props.ts IconProps: { size?, className? }）。
+ * 仅声明本插件用到的导出，逐条对照 0.1.0-rc.7 源码（icons/props.ts IconProps: { size?, className? }）。
  */
 declare module '@deepseek-ai/dsh-client-ui-primitives' {
   import type { ComponentType, ReactNode } from 'react'

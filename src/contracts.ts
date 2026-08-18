@@ -1,6 +1,6 @@
 /**
  * 本插件依赖的 DSH 运行时契约（ambient，自备）。
- * 逐条对照 0.1.0-rc.6 源码核对；刻意保持零 @deepseek-ai/* 运行时依赖——
+ * 逐条对照 0.1.0-rc.7 源码核对；刻意保持零 @deepseek-ai/* 运行时依赖——
  * 不 value-import 任何 @deepseek-ai/* 包，避免 profile 里出现第二个 cordis 实例。
  * （参照 dsh-plugin-market/src/contracts.ts 的同款约定。）
  */
