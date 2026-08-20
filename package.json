@@ -44,9 +44,17 @@
   },
   "license": "MIT",
   "peerDependencies": {
+    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-sidebar": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.8",
     "dsh-better-sidebar": "*"
   },
   "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-client-runtime": { "optional": true },
+    "@deepseek-ai/dsh-client-locale": { "optional": true },
+    "@deepseek-ai/dsh-client-ui-sidebar": { "optional": true },
+    "@deepseek-ai/dsh-client-ui-primitives": { "optional": true },
     "dsh-better-sidebar": {
       "optional": true
     }

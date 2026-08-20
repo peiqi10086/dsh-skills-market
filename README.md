@@ -2,7 +2,7 @@
 
 DSH（DeepSeek Harness）Skills 管理 + SkillHub 商城：在 Web UI 侧边栏入口的浮动面板里管理本地 skills（用户级 / 各工作区项目级 / 内置只读），并直接搜索、安装 [SkillHub](https://www.skillhub.cn/) 上的公开技能。
 
-> 基线版本：`@deepseek-ai/dsh` 0.1.0-rc.7（已在 rc.7 实测运行：Host 半 webServer/tools 服务与 Client 半 sidebar.footer.action/shell.overlay slots 注册均正常）。结构与注册范式参照 `dsh-plugin-market`。
+> 基线版本：`@deepseek-ai/dsh` 0.1.0-rc.8（已在 rc.8 完成类型检查、自动测试及 Host/Client 构建验证；Host 半 webServer/tools 服务与 Client 半 sidebar.footer.action/shell.overlay slots 契约保持兼容）。结构与注册范式参照 `dsh-plugin-market`。
 
 ## 功能
 
